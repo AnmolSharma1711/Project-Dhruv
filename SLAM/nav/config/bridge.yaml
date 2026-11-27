@@ -1,0 +1,14 @@
+# Settings for the /cmd_vel_smoothed -> Arduino serial bridge.
+# MEASURED at power 180 (the app's full speed): 0.148 m/s forward, 360 deg in 2.75 s.
+cmd_vel_bridge:
+  ros__parameters:
+    baud: 115200
+    cmd_topic: /cmd_vel_smoothed
+    pwm_per_mps: 1216.0      # 180 / 0.148
+    pwm_per_radps: 78.8      # 180 / 2.285 rad/s
+    min_pwm: 25              # below this the wheels only hum
+    max_pwm: 180             # firmware SPEED_LIMIT
+    drive_sign: 1            # -1 if "forward" drives backward
+    turn_sign: 1             # -1 if "turn left" pivots right
+    cmd_timeout: 0.5         # seconds without a command -> send zeros
+    rate_hz: 20.0            # firmware stops itself after 1.5 s of silence

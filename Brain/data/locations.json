@@ -1,0 +1,64 @@
+{
+  "center": {
+    "aliases": [
+      "centre",
+      "केंद्र",
+      "सेंटर"
+    ],
+    "facts": "Dhruv starts a new physically localized session here."
+  },
+  "home": {
+    "aliases": [
+      "होम"
+    ],
+    "facts": ""
+  },
+  "p1": {
+    "aliases": [
+      "point 1",
+      "p one",
+      "पी वन"
+    ],
+    "facts": ""
+  },
+  "p2": {
+    "aliases": [
+      "point 2",
+      "p two",
+      "पी टू"
+    ],
+    "facts": ""
+  },
+  "p3": {
+    "aliases": [
+      "point 3",
+      "p three",
+      "पी थ्री"
+    ],
+    "facts": ""
+  },
+  "p4": {
+    "aliases": [
+      "point 4",
+      "p four",
+      "पी फोर"
+    ],
+    "facts": ""
+  },
+  "p5": {
+    "aliases": [
+      "point 5",
+      "p five",
+      "पी फाइव"
+    ],
+    "facts": ""
+  },
+  "p6": {
+    "aliases": [
+      "point 6",
+      "p six",
+      "पी सिक्स"
+    ],
+    "facts": ""
+  }
+}

@@ -1,0 +1,7 @@
+.env
+__pycache__/
+data/faces/*
+!data/faces/.gitkeep
+data/models/*
+!data/models/.gitkeep
+*.pyc

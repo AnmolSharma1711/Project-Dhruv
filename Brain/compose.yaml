@@ -1,0 +1,53 @@
+services:
+  conversation:
+    build: .
+    init: true
+    restart: on-failure
+    env_file: .env
+    user: "${ROBOT_UID:?set ROBOT_UID}:${ROBOT_GID:?set ROBOT_GID}"
+    environment:
+      PULSE_SERVER: unix:/run/host-pulse/native
+      PULSE_COOKIE: /run/host-cookie
+    devices:
+      - "${CAMERA_HOST_DEVICE:-/dev/video0}:/dev/video0"
+    group_add:
+      - "${VIDEO_GID:?set VIDEO_GID}"
+    volumes:
+      - type: bind
+        source: ./data
+        target: /app/data
+        read_only: true
+      - type: bind
+        source: ${DHRUV_RUNTIME_DIR:?set DHRUV_RUNTIME_DIR}
+        target: /run/dhruv
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${PULSE_RUNTIME_DIR:?set PULSE_RUNTIME_DIR}
+        target: /run/host-pulse
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${PULSE_COOKIE_FILE:?set PULSE_COOKIE_FILE}
+        target: /run/host-cookie
+        read_only: true
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os, time; raise SystemExit(time.time() - os.stat('/tmp/brain-capture').st_mtime > 15)"]
+      interval: 10s
+      timeout: 3s
+      retries: 2
+      start_period: 15s
+    logging:
+      options:
+        max-size: "5m"
+        max-file: "3"

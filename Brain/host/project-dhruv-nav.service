@@ -1,0 +1,15 @@
+[Unit]
+Description=Project Dhruv navigation bridge
+StartLimitIntervalSec=0
+
+[Service]
+WorkingDirectory=%h/Project-Dhruv/Brain
+ExecStart=/bin/bash %h/Project-Dhruv/Brain/host/start.sh
+EnvironmentFile=-%h/.config/project-dhruv/nav.env
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=175
+KillMode=mixed
+
+[Install]
+WantedBy=default.target

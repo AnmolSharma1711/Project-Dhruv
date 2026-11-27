@@ -1,0 +1,18 @@
+[Unit]
+Description=Project Dhruv conversation container
+After=project-dhruv-nav.service pulseaudio.service
+Wants=project-dhruv-nav.service pulseaudio.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=%h/Project-Dhruv/Brain
+ExecStartPre=/usr/bin/pactl info
+ExecStart=/usr/bin/docker compose up -d
+ExecStop=/usr/bin/docker compose stop
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

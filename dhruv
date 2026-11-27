@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -eo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export SLAM_DIR="$ROOT/SLAM"
+export SLAM_CHECKPOINTS="$SLAM_DIR/saved_map/checkpoints.json"
+export CHECKPOINTS="$SLAM_CHECKPOINTS"
+export MAP="$SLAM_DIR/saved_map/project_lab.yaml"
+export SESSION=project-dhruv-slam
+WS="$HOME/.local/share/project-dhruv/ros_ws"
+export WS_SETUP="$WS/install/setup.bash"
+cd "$ROOT/Brain"
+nav() { python3 -m host.bridge "$@"; }
+die() { echo "$*" >&2; exit 1; }
+ros_base() {
+    [[ -f /opt/ros/humble/setup.bash ]] || die "Install ROS 2 Humble on Ubuntu 22.04 first (see README)."
+    source /opt/ros/humble/setup.bash
+    if [[ -f "$HOME/ros2_ws/install/setup.bash" ]]; then source "$HOME/ros2_ws/install/setup.bash"; fi
+}
+case "${1:-help}" in
+configure)
+    python3 "$ROOT/scripts/configure.py"
+    ;;
+install)
+    ros_base
+    [[ "$ROOT" == "$HOME/Project-Dhruv" ]] || die "Clone this repository at ~/Project-Dhruv for the supplied services."
+    command -v tmux >/dev/null
+    command -v colcon >/dev/null
+    docker compose config --quiet
+    paths=("$SLAM_DIR/nav" "$SLAM_DIR/ekf_node" "$SLAM_DIR/localization_node" "$SLAM_DIR/slam_node")
+    mkdir -p "$WS"
+    cd "$WS"
+    if ! ros2 pkg prefix rf2o_laser_odometry >/dev/null 2>&1; then
+        if [[ ! -d rf2o_laser_odometry ]]; then git clone --branch ros2 --depth 1 https://github.com/MAPIRlab/rf2o_laser_odometry.git; fi
+        paths+=("$WS/rf2o_laser_odometry")
+    fi
+    rosdep install --from-paths "${paths[@]}" --ignore-src -r -y
+    colcon build --symlink-install --base-paths "${paths[@]}" --executor sequential
+    source "$WS_SETUP"
+    for executable in 'rplidar_ros rplidar_composition' 'rf2o_laser_odometry rf2o_laser_odometry_node' 'nav navigate_to'; do
+        ros2 pkg executables "${executable%% *}" | grep -Fx "$executable" >/dev/null || die "Missing ROS executable: $executable"
+    done
+    cd "$SLAM_DIR/akshat/imu_argon"
+    g++ -std=c++17 -O2 -pthread imu_worker.cpp -o imu_worker
+    cd "$ROOT/Brain"
+    docker compose build
+    mkdir -p "$HOME/.config/systemd/user"
+    install -m 644 host/project-dhruv-nav.service "$HOME/.config/systemd/user/"
+    systemctl --user daemon-reload
+    echo "Installed. Follow Daily startup in README.md."
+    ;;
+slam)
+    [[ -r "$WS_SETUP" ]] || die "Run bash dhruv install first."
+    if tmux has-session -t "=$SESSION" 2>/dev/null; then exec tmux attach -t "=$SESSION"; fi
+    if tmux has-session -t '=slam' 2>/dev/null; then die "Your previous SLAM session is active. Shut it down while stationary before starting this copy."; fi
+    exec bash "$SLAM_DIR/nav/scripts/startup.sh"
+    ;;
+brain)
+    source "$WS_SETUP"
+    timeout 6 ros2 lifecycle get /bt_navigator | grep -q '^active' || die "Nav2 is not active. Finish localization in Terminal 1 first."
+    systemctl --user start project-dhruv-nav.service
+    for attempt in {1..25}; do nav status >/dev/null 2>&1 && break; sleep 0.2; done
+    if [[ -n "${2:-}" ]]; then nav localize "$2"; fi
+    nav status | python3 -c 'import sys,json; s=json.load(sys.stdin); sys.exit(0 if s["mode"]=="ready" else "Confirm the actual checkpoint and localize before starting.")'
+    docker compose up -d
+    docker compose ps
+    ;;
+status) nav status; docker compose ps ;;
+logs) docker compose logs --tail 50 -f conversation ;;
+cancel) nav stop ;;
+go) nav go "${2:?supply a checkpoint}" ;;
+stop)
+    if tmux has-session -t "=$SESSION" 2>/dev/null; then
+        echo "Confirm the chassis is stationary before shutting down SLAM."
+        read -r -p 'Type STOP to shut down the robot software: ' answer
+        [[ "$answer" == STOP ]] || exit 1
+    fi
+    docker compose down
+    systemctl --user stop project-dhruv-nav.service
+    if tmux has-session -t "=$SESSION" 2>/dev/null; then tmux kill-session -t "=$SESSION"; fi
+    ;;
+*) echo 'Usage: bash dhruv {configure|install|slam|brain [checkpoint]|status|logs|go POINT|cancel|stop}' ;;
+esac

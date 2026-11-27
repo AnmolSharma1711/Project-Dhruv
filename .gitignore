@@ -1,0 +1,17 @@
+**/__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+kaggle*.json
+Brain/data/people.json
+**/build/
+**/install/
+**/log/
+**/imu_worker
+*.csv
+.DS_Store
+**/.venv/
+**/.pytest_cache/
